@@ -6,108 +6,117 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 
 <style>
-    body {
-        margin: 0;
-        background: radial-gradient(circle at center, #111 0%, #050505 100%);
-        color: #eaeaea;
-        font-family: "Georgia", serif;
-        overflow-x: hidden;
-        perspective: 1200px;
-    }
+body {
+    margin: 0;
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
 
-    section {
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        padding: 2rem;
-    }
+/* Phone frame */
+.phone {
+    width: 320px;
+    height: 640px;
+    background: #111;
+    border-radius: 40px;
+    box-shadow: 0 0 40px rgba(0,0,0,0.8);
+    overflow: hidden;
+    position: relative;
+}
 
-    h1 {
-        font-size: 4.5rem;
-        letter-spacing: 0.15em;
-        opacity: 0;
-        animation: fadeInTitle 4s ease forwards;
-    }
+/* Screen */
+.screen {
+    padding: 20px;
+    color: #fff;
+    height: 100%;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
 
-    @keyframes fadeInTitle {
-        to { opacity: 1; }
-    }
+/* Messages */
+.message {
+    margin-bottom: 15px;
+    padding: 10px 14px;
+    border-radius: 18px;
+    max-width: 80%;
+    opacity: 0;
+}
 
-    p {
-        max-width: 750px;
-        font-size: 1.25rem;
-        line-height: 1.8;
-        opacity: 0;
-        transition: opacity 3s ease;
-    }
+.sent {
+    background: #333;
+    align-self: flex-end;
+}
 
-    .visible { opacity: 1; }
+.received {
+    background: #1c1c1c;
+}
 
-    .question {
-        color: #aa0000;
-        font-size: 2.1rem;
-        margin-top: 2rem;
-        font-weight: bold;
-        opacity: 0;
-        animation: flicker 0.15s infinite alternate;
-    }
+.red {
+    background: #330000;
+    color: #ff2a2a;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
 
-    @keyframes flicker {
-        from { opacity: 0.5; }
-        to { opacity: 1; }
-    }
+/* Glitch */
+.glitch {
+    animation: glitch 0.15s infinite alternate;
+}
 
-    /* Jumpscare overlay */
-    .jumpscare {
-        position: fixed;
-        inset: 0;
-        background: black;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 999;
-        opacity: 0;
-        pointer-events: none;
-    }
+@keyframes glitch {
+    from { transform: translateX(-1px); }
+    to { transform: translateX(1px); }
+}
 
-    .knife {
-        width: 200px;
-        transform: scale(0.1) rotateY(0deg);
-    }
+/* Jumpscare overlay */
+.jumpscare {
+    position: fixed;
+    inset: 0;
+    background: black;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+    opacity: 0;
+}
 
-    .flash {
-        position: fixed;
-        inset: 0;
-        background: white;
-        opacity: 0;
-        z-index: 1000;
-        pointer-events: none;
-    }
+.knife {
+    width: 150px;
+    transform: scale(0.1);
+}
+
+.flash {
+    position: fixed;
+    inset: 0;
+    background: white;
+    opacity: 0;
+    z-index: 1000;
+}
 </style>
 </head>
 <body>
 
-<section>
-    <h1>Murdered.</h1>
-</section>
-
-<section>
-    <div>
-        <p id="story">
+<div class="phone">
+    <div class="screen" id="screen">
+        <div class="message received" id="m1">
             I was sitting alone, tiny lamp illuminating the desk in front of me.
-            A text from my phone lights up my features,
+        </div>
+        <div class="message received" id="m2">
+            A text from my phone lights up my features.
+        </div>
+        <div class="message received" id="m3">
             I read it and ponder upon the words written upon the screen.
-        </p>
-
-        <p class="question" id="question">
+        </div>
+        <div class="message received red" id="question">
             If you were to be murdered, how would you like to go?
-        </p>
+        </div>
     </div>
-</section>
+</div>
 
-<!-- Jumpscare -->
 <div class="jumpscare" id="jumpscare">
     <svg class="knife" id="knife" viewBox="0 0 100 300">
         <path d="M50 10 L65 200 L35 200 Z"
@@ -120,43 +129,43 @@
 <div class="flash" id="flash"></div>
 
 <script>
-const story = document.getElementById("story");
+const messages = ["m1","m2","m3"];
 const question = document.getElementById("question");
 const jumpscare = document.getElementById("jumpscare");
 const knife = document.getElementById("knife");
 const flash = document.getElementById("flash");
 
-const observer = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-        if (entry.isIntersecting) {
-
-            story.classList.add("visible");
-
-            setTimeout(() => {
-                question.style.opacity = "1";
-                startHeartbeat();
-
-                // 5s later → silence then jumpscare
-                setTimeout(() => {
-                    stopHeartbeat();
-
-                    setTimeout(() => {
-                        triggerJumpScare();
-                    }, 1500);
-
-                }, 5000);
-
-            }, 3000);
-
-            observer.disconnect();
-        }
-    });
-}, { threshold: 0.6 });
-
-observer.observe(story);
-
-let heartbeatInterval;
 let audioCtx;
+let heartbeatInterval;
+
+function showMessage(id, delay) {
+    setTimeout(() => {
+        gsap.to("#"+id, {opacity: 1, duration: 1});
+    }, delay);
+}
+
+// Sequential message reveal
+showMessage("m1", 1000);
+showMessage("m2", 3000);
+showMessage("m3", 5000);
+
+// Red question after 3 seconds more
+setTimeout(() => {
+    gsap.to(question, {opacity: 1, duration: 1});
+    question.classList.add("glitch");
+    startHeartbeat();
+
+    // Silence after 5 seconds
+    setTimeout(() => {
+        stopHeartbeat();
+
+        setTimeout(() => {
+            triggerJumpScare();
+        }, 1500);
+
+    }, 5000);
+
+}, 8000);
 
 function startHeartbeat() {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -186,44 +195,34 @@ function stopHeartbeat() {
 
 function triggerJumpScare() {
     jumpscare.style.opacity = "1";
+    playStab();
 
-    playStabSound();
+    gsap.to(flash, {opacity:1, duration:0.05});
+    gsap.to(flash, {opacity:0, duration:0.2, delay:0.05});
 
-    // white flash
-    gsap.to(flash, { opacity: 1, duration: 0.05 });
-    gsap.to(flash, { opacity: 0, duration: 0.2, delay: 0.05 });
-
-    // aggressive zoom toward viewer
     gsap.to(knife, {
-        scale: 8,
-        rotationY: 720,
+        scale: 10,
         duration: 0.4,
         ease: "power4.out"
     });
 
-    // cut to black
     setTimeout(() => {
-        gsap.to("body", { backgroundColor: "black", duration: 0.5 });
+        document.body.style.background = "black";
         jumpscare.style.opacity = "0";
     }, 600);
 }
 
-function playStabSound() {
+function playStab() {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
-
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-
     osc.type = "sawtooth";
     osc.frequency.setValueAtTime(200, ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.3);
-
     gain.gain.setValueAtTime(1, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-
     osc.connect(gain);
     gain.connect(ctx.destination);
-
     osc.start();
     osc.stop(ctx.currentTime + 0.4);
 }
