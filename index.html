@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <title>Murdered.</title>
+
+<!-- GSAP CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
 <style>
     body {
         margin: 0;
@@ -10,7 +14,7 @@
         color: #eaeaea;
         font-family: "Georgia", serif;
         overflow-x: hidden;
-        perspective: 1000px;
+        perspective: 1200px;
     }
 
     section {
@@ -33,19 +37,16 @@
         to { opacity: 1; }
     }
 
-    .fade-in {
+    p {
+        max-width: 750px;
+        font-size: 1.25rem;
+        line-height: 1.8;
         opacity: 0;
         transition: opacity 3s ease;
     }
 
     .visible {
         opacity: 1;
-    }
-
-    p {
-        max-width: 750px;
-        font-size: 1.25rem;
-        line-height: 1.8;
     }
 
     .question {
@@ -67,55 +68,20 @@
     }
 
     @keyframes glitchShift {
-        0% { text-shadow: 2px 0 red, -2px 0 black; transform: translateX(0); }
-        50% { text-shadow: -2px 0 red, 2px 0 black; transform: translateX(2px); }
-        100% { text-shadow: 2px 0 red, -2px 0 black; transform: translateX(-2px); }
+        0% { text-shadow: 2px 0 red, -2px 0 black; }
+        50% { text-shadow: -2px 0 red, 2px 0 black; }
+        100% { text-shadow: 2px 0 red, -2px 0 black; }
     }
 
-    /* Knife container */
-    .knife-container {
+    .knife-wrapper {
         margin-top: 6rem;
         opacity: 0;
-        transition: opacity 3s ease;
         transform-style: preserve-3d;
     }
 
-    .knife-visible {
-        opacity: 1;
-        animation: rotateIn 8s ease forwards;
-    }
-
-    @keyframes rotateIn {
-        from { transform: rotateY(75deg) scale(0.8); }
-        to { transform: rotateY(0deg) scale(1); }
-    }
-
     .knife {
-        width: 90px;
-        filter: drop-shadow(0 0 10px rgba(255,255,255,0.08));
-        position: relative;
-        overflow: visible;
-    }
-
-    /* Subtle shine sweep */
-    .shine {
-        position: absolute;
-        top: 10%;
-        left: -100%;
-        width: 50%;
-        height: 80%;
-        background: linear-gradient(
-            120deg,
-            transparent,
-            rgba(255,255,255,0.25),
-            transparent
-        );
-        transform: skewX(-20deg);
-        animation: shineMove 2s ease forwards;
-    }
-
-    @keyframes shineMove {
-        to { left: 150%; }
+        width: 100px;
+        filter: drop-shadow(0 0 12px rgba(255,255,255,0.1));
     }
 
 </style>
@@ -128,7 +94,7 @@
 
 <section>
     <div>
-        <p class="fade-in" id="story">
+        <p id="story">
             I was sitting alone, tiny lamp illuminating the desk in front of me.
             A text from my phone lights up my features,
             I read it and ponder upon the words written upon the screen.
@@ -138,39 +104,41 @@
             If you were to be murdered, how would you like to go?
         </p>
 
-        <div class="knife-container" id="knifeContainer">
-            <div style="position:relative; display:inline-block;">
-                <svg class="knife" viewBox="0 0 100 300">
-                    <!-- Blade -->
-                    <path d="M50 10 L65 200 L35 200 Z"
-                          fill="silver" stroke="#ccc" stroke-width="2"/>
-                    <!-- Handle -->
-                    <rect x="40" y="200" width="20" height="80"
-                          fill="#222"/>
-                </svg>
-                <div class="shine" id="shine"></div>
-            </div>
+        <div class="knife-wrapper" id="knifeWrapper">
+            <svg class="knife" viewBox="0 0 100 300">
+                <path d="M50 10 L65 200 L35 200 Z"
+                      fill="silver" stroke="#ccc" stroke-width="2"/>
+                <rect x="40" y="200" width="20" height="80"
+                      fill="#222"/>
+            </svg>
         </div>
-
     </div>
 </section>
 
 <script>
     const story = document.getElementById("story");
     const question = document.getElementById("question");
-    const knifeContainer = document.getElementById("knifeContainer");
+    const knifeWrapper = document.getElementById("knifeWrapper");
 
-    // Story reveal
+    // Scroll reveal for story
     const observer = new IntersectionObserver(entries => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
+
                 story.classList.add("visible");
 
+                // 3 seconds after story → show red question
                 setTimeout(() => {
                     question.style.opacity = "1";
                     question.classList.add("glitch");
                     startHeartbeat();
-                }, 5000);
+
+                    // 5 seconds after question → show knife
+                    setTimeout(() => {
+                        revealKnife();
+                    }, 5000);
+
+                }, 3000);
 
                 observer.disconnect();
             }
@@ -179,18 +147,30 @@
 
     observer.observe(story);
 
-    // Knife reveal after red text
-    const knifeObserver = new IntersectionObserver(entries => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                knifeContainer.classList.add("knife-visible");
-                playMetalScrape();
-                knifeObserver.disconnect();
-            }
-        });
-    }, { threshold: 0.6 });
+    function revealKnife() {
+        knifeWrapper.style.opacity = "1";
+        playMetalScrape();
 
-    knifeObserver.observe(knifeContainer);
+        // GSAP 360° 3D rotation
+        gsap.fromTo(knifeWrapper,
+            { rotationY: 90, scale: 0.8 },
+            {
+                rotationY: 450, // full 360 from forward-facing
+                scale: 1,
+                duration: 4,
+                ease: "power2.inOut"
+            }
+        );
+
+        // Fade out after 5 seconds
+        setTimeout(() => {
+            gsap.to(knifeWrapper, {
+                opacity: 0,
+                duration: 3,
+                ease: "power2.out"
+            });
+        }, 5000);
+    }
 
     // Heartbeat
     let heartbeatStarted = false;
@@ -224,23 +204,23 @@
         }, 1200);
     }
 
-    // Metallic scrape sound
+    // Metallic scrape
     function playMetalScrape() {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-        const noiseBuffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 1.5, audioCtx.sampleRate);
-        const data = noiseBuffer.getChannelData(0);
+        const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 1.5, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
 
         for (let i = 0; i < data.length; i++) {
             data[i] = (Math.random() * 2 - 1) * 0.3;
         }
 
         const noise = audioCtx.createBufferSource();
-        noise.buffer = noiseBuffer;
+        noise.buffer = buffer;
 
         const filter = audioCtx.createBiquadFilter();
         filter.type = "bandpass";
-        filter.frequency.value = 1000;
+        filter.frequency.value = 1200;
         filter.Q.value = 1;
 
         const gain = audioCtx.createGain();
@@ -254,7 +234,9 @@
         noise.start();
         noise.stop(audioCtx.currentTime + 1.2);
     }
+
 </script>
 
 </body>
 </html>
+
