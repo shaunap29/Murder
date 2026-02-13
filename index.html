@@ -10,6 +10,7 @@
         color: #eaeaea;
         font-family: "Georgia", serif;
         overflow-x: hidden;
+        perspective: 1000px;
     }
 
     section {
@@ -23,7 +24,6 @@
 
     h1 {
         font-size: 4.5rem;
-        font-weight: normal;
         letter-spacing: 0.15em;
         opacity: 0;
         animation: fadeInTitle 4s ease forwards;
@@ -72,28 +72,52 @@
         100% { text-shadow: 2px 0 red, -2px 0 black; transform: translateX(-2px); }
     }
 
-    /* Knife styling */
+    /* Knife container */
     .knife-container {
-        margin-top: 5rem;
+        margin-top: 6rem;
         opacity: 0;
         transition: opacity 3s ease;
+        transform-style: preserve-3d;
     }
 
     .knife-visible {
         opacity: 1;
+        animation: rotateIn 8s ease forwards;
+    }
+
+    @keyframes rotateIn {
+        from { transform: rotateY(75deg) scale(0.8); }
+        to { transform: rotateY(0deg) scale(1); }
     }
 
     .knife {
-        width: 80px;
-        animation: sway 6s ease-in-out infinite;
-        filter: drop-shadow(0 0 6px rgba(255,255,255,0.1));
+        width: 90px;
+        filter: drop-shadow(0 0 10px rgba(255,255,255,0.08));
+        position: relative;
+        overflow: visible;
     }
 
-    @keyframes sway {
-        0% { transform: rotate(-2deg); }
-        50% { transform: rotate(2deg); }
-        100% { transform: rotate(-2deg); }
+    /* Subtle shine sweep */
+    .shine {
+        position: absolute;
+        top: 10%;
+        left: -100%;
+        width: 50%;
+        height: 80%;
+        background: linear-gradient(
+            120deg,
+            transparent,
+            rgba(255,255,255,0.25),
+            transparent
+        );
+        transform: skewX(-20deg);
+        animation: shineMove 2s ease forwards;
     }
+
+    @keyframes shineMove {
+        to { left: 150%; }
+    }
+
 </style>
 </head>
 <body>
@@ -115,15 +139,17 @@
         </p>
 
         <div class="knife-container" id="knifeContainer">
-            <!-- Simple SVG knife -->
-            <svg class="knife" viewBox="0 0 100 300">
-                <!-- Blade -->
-                <path d="M50 10 L65 200 L35 200 Z"
-                      fill="silver" stroke="#ccc" stroke-width="2"/>
-                <!-- Handle -->
-                <rect x="40" y="200" width="20" height="80"
-                      fill="#222"/>
-            </svg>
+            <div style="position:relative; display:inline-block;">
+                <svg class="knife" viewBox="0 0 100 300">
+                    <!-- Blade -->
+                    <path d="M50 10 L65 200 L35 200 Z"
+                          fill="silver" stroke="#ccc" stroke-width="2"/>
+                    <!-- Handle -->
+                    <rect x="40" y="200" width="20" height="80"
+                          fill="#222"/>
+                </svg>
+                <div class="shine" id="shine"></div>
+            </div>
         </div>
 
     </div>
@@ -134,6 +160,7 @@
     const question = document.getElementById("question");
     const knifeContainer = document.getElementById("knifeContainer");
 
+    // Story reveal
     const observer = new IntersectionObserver(entries => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
@@ -152,14 +179,16 @@
 
     observer.observe(story);
 
-    // Knife appears on further scroll
+    // Knife reveal after red text
     const knifeObserver = new IntersectionObserver(entries => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 knifeContainer.classList.add("knife-visible");
+                playMetalScrape();
+                knifeObserver.disconnect();
             }
         });
-    }, { threshold: 0.5 });
+    }, { threshold: 0.6 });
 
     knifeObserver.observe(knifeContainer);
 
@@ -193,6 +222,37 @@
             beat();
             setTimeout(beat, 250);
         }, 1200);
+    }
+
+    // Metallic scrape sound
+    function playMetalScrape() {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        const noiseBuffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 1.5, audioCtx.sampleRate);
+        const data = noiseBuffer.getChannelData(0);
+
+        for (let i = 0; i < data.length; i++) {
+            data[i] = (Math.random() * 2 - 1) * 0.3;
+        }
+
+        const noise = audioCtx.createBufferSource();
+        noise.buffer = noiseBuffer;
+
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = "bandpass";
+        filter.frequency.value = 1000;
+        filter.Q.value = 1;
+
+        const gain = audioCtx.createGain();
+        gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.2);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        noise.start();
+        noise.stop(audioCtx.currentTime + 1.2);
     }
 </script>
 
