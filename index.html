@@ -56,14 +56,13 @@
         opacity: 0;
     }
 
-    /* Flicker + glitch distortion */
     .glitch {
         animation: flicker 0.15s infinite alternate,
                    glitchShift 0.2s infinite alternate;
     }
 
     @keyframes flicker {
-        from { opacity: 0.4; }
+        from { opacity: 0.5; }
         to { opacity: 1; }
     }
 
@@ -71,6 +70,29 @@
         0% { text-shadow: 2px 0 red, -2px 0 black; transform: translateX(0); }
         50% { text-shadow: -2px 0 red, 2px 0 black; transform: translateX(2px); }
         100% { text-shadow: 2px 0 red, -2px 0 black; transform: translateX(-2px); }
+    }
+
+    /* Knife styling */
+    .knife-container {
+        margin-top: 5rem;
+        opacity: 0;
+        transition: opacity 3s ease;
+    }
+
+    .knife-visible {
+        opacity: 1;
+    }
+
+    .knife {
+        width: 80px;
+        animation: sway 6s ease-in-out infinite;
+        filter: drop-shadow(0 0 6px rgba(255,255,255,0.1));
+    }
+
+    @keyframes sway {
+        0% { transform: rotate(-2deg); }
+        50% { transform: rotate(2deg); }
+        100% { transform: rotate(-2deg); }
     }
 </style>
 </head>
@@ -91,19 +113,32 @@
         <p class="question" id="question">
             If you were to be murdered, how would you like to go?
         </p>
+
+        <div class="knife-container" id="knifeContainer">
+            <!-- Simple SVG knife -->
+            <svg class="knife" viewBox="0 0 100 300">
+                <!-- Blade -->
+                <path d="M50 10 L65 200 L35 200 Z"
+                      fill="silver" stroke="#ccc" stroke-width="2"/>
+                <!-- Handle -->
+                <rect x="40" y="200" width="20" height="80"
+                      fill="#222"/>
+            </svg>
+        </div>
+
     </div>
 </section>
 
 <script>
     const story = document.getElementById("story");
     const question = document.getElementById("question");
+    const knifeContainer = document.getElementById("knifeContainer");
 
     const observer = new IntersectionObserver(entries => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 story.classList.add("visible");
 
-                // Delay question by 5 seconds after story appears
                 setTimeout(() => {
                     question.style.opacity = "1";
                     question.classList.add("glitch");
@@ -117,7 +152,18 @@
 
     observer.observe(story);
 
-    // Heartbeat audio (Web Audio API)
+    // Knife appears on further scroll
+    const knifeObserver = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                knifeContainer.classList.add("knife-visible");
+            }
+        });
+    }, { threshold: 0.5 });
+
+    knifeObserver.observe(knifeContainer);
+
+    // Heartbeat
     let heartbeatStarted = false;
 
     function startHeartbeat() {
@@ -143,17 +189,11 @@
             osc.stop(audioCtx.currentTime + 0.15);
         }
 
-        // Repeating heartbeat rhythm (lub-dub)
         setInterval(() => {
             beat();
             setTimeout(beat, 250);
         }, 1200);
     }
-</script>
-
-</body>
-</html>
-
 </script>
 
 </body>
